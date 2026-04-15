@@ -1,0 +1,42 @@
+name: OpenCode PR Review (Groq)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [develop]
+
+jobs:
+  review:
+    name: AI Code Review with Groq
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install diffcheck (OpenCode + Groq)
+        run: npm install -g diffcheck
+
+      - name: Run AI review on PR changes
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          diffcheck \
+            --base origin/${{ github.base_ref }} \
+            --head HEAD \
+            --provider groq \
+            --model groq/compound \
+            --github \
+            --pr ${{ github.event.pull_request.number }} \
+            --prompt "Eres un revisor senior de React y TypeScript. El proyecto usa Vite, Yarn moderno y Cloudflare Pages. Enfócate en: props faltantes o tipados incorrectos, efectos con dependencias incorrectas, fugas de memoria, mal uso de variables de entorno VITE_*, problemas de rendimiento. Ignora estilos de formato. Si no hay problemas reales, no comentes nada."
