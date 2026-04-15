@@ -33,9 +33,8 @@ jobs:
         run: |
           diffcheck \
             --base origin/${{ github.base_ref }} \
-            --model groq/qwen/qwen3-32b \
+            --model groq/llama-3.3-70b-versatile \
             --format markdown \
-            --deep \
             --verbose \
             --confidence 40 | tee review_output.md
 
