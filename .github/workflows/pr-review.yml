@@ -33,9 +33,11 @@ jobs:
         run: |
           diffcheck \
             --base origin/${{ github.base_ref }} \
-            --model groq/meta-llama/llama-4-scout-17b-16e-instruct \
+            --model groq/qwen/qwen3-32b \
             --format markdown \
-            --confidence 60 | tee review_output.md
+            --deep \
+            --verbose \
+            --confidence 40 | tee review_output.md
 
       - name: Post review on PR
         if: always()
@@ -50,4 +52,3 @@ jobs:
             } > comment.md
             gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
           fi
-
