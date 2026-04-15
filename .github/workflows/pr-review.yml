@@ -1,4 +1,4 @@
-name: OpenCode PR Review (Groq)
+name: AI PR Review (Groq)
 
 on:
   pull_request:
@@ -24,19 +24,30 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install diffcheck (OpenCode + Groq)
-        run: npm install -g diffcheck
+      - name: Install dependencies
+        run: npm install -g diffcheck opencode-ai
 
-      - name: Run AI review on PR changes
+      - name: Run AI code review
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           diffcheck \
             --base origin/${{ github.base_ref }} \
-            --head HEAD \
-            --provider groq \
-            --model groq/compound \
-            --github \
-            --pr ${{ github.event.pull_request.number }} \
-            --prompt "Eres un revisor senior de React y TypeScript. El proyecto usa Vite, Yarn moderno y Cloudflare Pages. Enfócate en: props faltantes o tipados incorrectos, efectos con dependencias incorrectas, fugas de memoria, mal uso de variables de entorno VITE_*, problemas de rendimiento. Ignora estilos de formato. Si no hay problemas reales, no comentes nada."
+            --model groq/meta-llama/llama-4-scout-17b-16e-instruct \
+            --format markdown \
+            --confidence 60 | tee review_output.md
+
+      - name: Post review on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -s review_output.md ]; then
+            {
+              echo "## 🤖 AI Code Review"
+              echo ""
+              cat review_output.md
+            } > comment.md
+            gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
+          fi
+
