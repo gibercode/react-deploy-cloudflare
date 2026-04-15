@@ -1,4 +1,4 @@
-name: AI PR Review (Groq)
+name: AI PR Review
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   review:
-    name: AI Code Review with Groq
+    name: AI Code Review
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -26,7 +26,7 @@ jobs:
           gh pr diff ${{ github.event.pull_request.number }} > pr_diff.txt
           echo "Diff size: $(wc -c < pr_diff.txt) bytes"
 
-      - name: Review with Groq AI
+      - name: Review with AI
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
@@ -77,7 +77,6 @@ jobs:
               cat review_output.md
               echo ""
               echo "---"
-              echo "*Revisión automática por Groq AI*"
             } > comment.md
             gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
           fi

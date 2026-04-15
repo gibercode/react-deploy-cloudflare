@@ -1,0 +1,81 @@
+name: Lighthouse Performance Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [develop]
+
+jobs:
+  lighthouse:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build project
+        run: yarn build
+
+      - name: Run Lighthouse CI
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: .lighthouserc.json
+
+      - name: Format Lighthouse results
+        id: format
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = ${{ steps.lighthouse.outputs.manifest }};
+            const links = ${{ steps.lighthouse.outputs.links }};
+
+            if (!results || results.length === 0) {
+              core.setOutput('comment', '⚠️ No se pudieron obtener los resultados de Lighthouse.');
+              return;
+            }
+
+            const summary = results[0].summary;
+
+            const score = (value) => {
+              const pct = Math.round(value * 100);
+              if (pct >= 90) return `🟢 ${pct}`;
+              if (pct >= 50) return `🟠 ${pct}`;
+              return `🔴 ${pct}`;
+            };
+
+            const comment = `## ⚡ Lighthouse Performance Audit
+
+            | Categoría | Puntuación |
+            |-----------|-----------|
+            | 🎭 Performance | ${score(summary.performance)} |
+            | ♿ Accessibility | ${score(summary.accessibility)} |
+            | ✅ Best Practices | ${score(summary['best-practices'])} |
+            | 🔍 SEO | ${score(summary.seo)} |
+
+            📊 [Ver reporte completo](${Object.values(links)[0]})
+
+            ---
+            *Auditoría automática por Lighthouse CI*`;
+
+            core.setOutput('comment', comment);
+
+      - name: Post Lighthouse results on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lighthouse
+          message: ${{ steps.format.outputs.comment }}
